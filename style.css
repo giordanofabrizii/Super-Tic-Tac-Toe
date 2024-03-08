@@ -1,0 +1,86 @@
+*{
+    box-sizing: border-box;
+    margin: 0;
+    background-color: rgb(84, 82, 187);
+    user-select: none;
+    font-family: 'Finger Paint', cursive;
+    color: #F2C14E;
+}
+
+body{
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+h1{
+    text-align: center;
+    line-height: 80px;
+    font-size: 54px;
+}
+
+#matrice {
+    margin: auto;
+    margin-top: 30px;
+    height: 675px;
+    width: 675px;
+    display: grid;
+    grid-template-columns:  repeat(3, 1fr);
+}
+
+.casellaGrande{
+    height: 225px;
+    width: 225px;
+    border: 2px solid #F2C14E;
+    border-left: none;
+    border-top: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 15px
+
+}
+
+#matrice > :nth-child(3n) {
+    border-right: none;
+}
+
+#matrice > :nth-child(n + 7) {
+    border-bottom: none;
+}
+
+.casellaPiccola {
+    height: 65px;
+    width: 65px;
+    border: 2px solid #F2C14E;
+    margin: 0;
+    border-left: none;
+    border-top: none;
+    font-size: 45px;
+    text-align: center;
+}
+
+.casellaGrande > :nth-child(3n) {
+    border-right: none;
+}
+
+.casellaGrande > :nth-child(n + 7) {
+    border-bottom: none;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background-color: #F2C14E;
+    color: #333;
+    border-color: #F2C14E;
+    font-size: 18px;
+    transition: 200ms transform;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+button:hover {
+    cursor: pointer;
+    transform: translateY(-2px);
+}
