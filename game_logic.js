@@ -19,8 +19,8 @@ const iniziaGioco = () => {
     })
 )}
 
-function casellaCliccata(e) {
-    const id = e.target.id;
+function casellaCliccata(casella) {
+    const id = casella.id;
     casellePiccole.forEach(casellaPiccola => casellaPiccola.removeEventListener('click', casellaCliccata))
     // ora togliamo il click da tutte le caselle per aggiungerlo solo a quelle dove si puo effettivamente cliccare
 
@@ -31,7 +31,7 @@ function casellaCliccata(e) {
     }
     if(!daCompletare[id]){ //se la casella non e' completata
         daCompletare[id] = giocatore;
-        e.target.innerText = giocatore;
+        casella.innerText = giocatore;
 
         //controlla se hai vinto
         if(vincita(id) !== false){ //se ha vinto
