@@ -12,9 +12,12 @@ let vittoria = Array(9).fill(null);
 // da questo array si controllano le condizioni di vittoria del super tris
 
 const iniziaGioco = () => {
-    casellePiccole.forEach(casellaPiccola => casellaPiccola.addEventListener('click', casellaCliccata))
-    // all'inizio tutte le caselle possono essere cliccate
-}
+    casellePiccole.forEach(casellaPiccola => casellaPiccola.addEventListener('click', () => {
+        if (daCompletare[casellaPiccola.id] === null) {
+            casellaCliccata(casellaPiccola);
+        }
+    })
+)}
 
 function casellaCliccata(e) {
     const id = e.target.id;
