@@ -1,141 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="style.css">
-    <title>Super Tic Tac Toe</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Finger+Paint&display=swap" rel="stylesheet"> 
-</head>
-<body>
-    <!-- titolo -->
-    <h1>SUPER TIC TAC TOE</h1>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Super Tris</title>
 
-    <!-- bottone di restart -->
-    <button id="restartBtn" onclick="ricaricaPagina()">Restart</button>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Super Tris</h1>
+      <h2>Giocatore: <span id="giocatore_attuale"></span></h2>
+    </header>
+    <main>
+      <div id="game-container"></div>
+    </main>
+    <footer>
+      <a href="https://www.github.com/giordanofabrizii">@giordanofabrizii</a>
+    </footer>
 
-    <!-- Super Tris -->
-    <div id="matrice">
-        <div class="casellaGrande" id="00">
-            <div class="casellaPiccola" id="0"></div>
-            <div class="casellaPiccola" id="1"></div>
-            <div class="casellaPiccola" id="2"></div>
-
-            <div class="casellaPiccola" id="3"></div>
-            <div class="casellaPiccola" id="4"></div>
-            <div class="casellaPiccola" id="5"></div>
-
-            <div class="casellaPiccola" id="6"></div>
-            <div class="casellaPiccola" id="7"></div>
-            <div class="casellaPiccola" id="8"></div>
-        </div>
-        <div class="casellaGrande" id="01">
-            <div class="casellaPiccola" id="9"></div>
-            <div class="casellaPiccola" id="10"></div>
-            <div class="casellaPiccola" id="11"></div>
-
-            <div class="casellaPiccola" id="12"></div>
-            <div class="casellaPiccola" id="13"></div>
-            <div class="casellaPiccola" id="14"></div>
-
-            <div class="casellaPiccola" id="15"></div>
-            <div class="casellaPiccola" id="16"></div>
-            <div class="casellaPiccola" id="17"></div>
-        </div>
-        <div class="casellaGrande" id="02">
-            <div class="casellaPiccola" id="18"></div>
-            <div class="casellaPiccola" id="19"></div>
-            <div class="casellaPiccola" id="20"></div>
-
-            <div class="casellaPiccola" id="21"></div>
-            <div class="casellaPiccola" id="22"></div>
-            <div class="casellaPiccola" id="23"></div>
-
-            <div class="casellaPiccola" id="24"></div>
-            <div class="casellaPiccola" id="25"></div>
-            <div class="casellaPiccola" id="26"></div>
-        </div>  
-        <div class="casellaGrande" id="03">
-            <div class="casellaPiccola" id="27"></div>
-            <div class="casellaPiccola" id="28"></div>
-            <div class="casellaPiccola" id="29"></div>
-
-            <div class="casellaPiccola" id="30"></div>
-            <div class="casellaPiccola" id="31"></div>
-            <div class="casellaPiccola" id="32"></div>
-
-            <div class="casellaPiccola" id="33"></div>
-            <div class="casellaPiccola" id="34"></div>
-            <div class="casellaPiccola" id="35"></div>
-        </div>  
-        <div class="casellaGrande" id="04">
-            <div class="casellaPiccola" id="36"></div>
-            <div class="casellaPiccola" id="37"></div>
-            <div class="casellaPiccola" id="38"></div>
-
-            <div class="casellaPiccola" id="39"></div>
-            <div class="casellaPiccola" id="40"></div>
-            <div class="casellaPiccola" id="41"></div>
-
-            <div class="casellaPiccola" id="42"></div>
-            <div class="casellaPiccola" id="43"></div>
-            <div class="casellaPiccola" id="44"></div>
-        </div>  
-        <div class="casellaGrande" id="05">
-            <div class="casellaPiccola" id="45"></div>
-            <div class="casellaPiccola" id="46"></div>
-            <div class="casellaPiccola" id="47"></div>
-
-            <div class="casellaPiccola" id="48"></div>
-            <div class="casellaPiccola" id="49"></div>
-            <div class="casellaPiccola" id="50"></div>
-
-            <div class="casellaPiccola" id="51"></div>
-            <div class="casellaPiccola" id="52"></div>
-            <div class="casellaPiccola" id="53"></div>
-        </div>  
-        <div class="casellaGrande" id="06">
-            <div class="casellaPiccola" id="54"></div>
-            <div class="casellaPiccola" id="55"></div>
-            <div class="casellaPiccola" id="56"></div>
-
-            <div class="casellaPiccola" id="57"></div>
-            <div class="casellaPiccola" id="58"></div>
-            <div class="casellaPiccola" id="59"></div>
-
-            <div class="casellaPiccola" id="60"></div>
-            <div class="casellaPiccola" id="61"></div>
-            <div class="casellaPiccola" id="62"></div>
-        </div>  
-        <div class="casellaGrande" id="07">
-            <div class="casellaPiccola" id="63"></div>
-            <div class="casellaPiccola" id="64"></div>
-            <div class="casellaPiccola" id="65"></div>
-
-            <div class="casellaPiccola" id="66"></div>
-            <div class="casellaPiccola" id="67"></div>
-            <div class="casellaPiccola" id="68"></div>
-
-            <div class="casellaPiccola" id="69"></div>
-            <div class="casellaPiccola" id="70"></div>
-            <div class="casellaPiccola" id="71"></div>
-        </div>  
-        <div class="casellaGrande" id="08">    
-            <div class="casellaPiccola" id="72"></div>
-            <div class="casellaPiccola" id="73"></div>
-            <div class="casellaPiccola" id="74"></div>
-
-            <div class="casellaPiccola" id="75"></div>
-            <div class="casellaPiccola" id="76"></div>
-            <div class="casellaPiccola" id="77"></div>
-
-            <div class="casellaPiccola" id="78"></div>
-            <div class="casellaPiccola" id="79"></div>
-            <div class="casellaPiccola" id="80"></div>
-        </div>  
+    <!-- Modal Spiegazioni -->
+    <div id="spiegazioni" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Regole del Gioco</h2>
+        <ol>
+          <li>
+            <b>Primo turno:</b>
+            il primo giocatore può posizionare il suo simbolo in qualsiasi
+            casella del tabellone.
+          </li>
+          <li>
+            <b>Regola del vincolo:</b>
+            la casella scelta determina in quale mini-griglia l'avversario dovrà
+            giocare. Esempio: se metto la X in basso a destra di una
+            mini-griglia, l'avversario dovrà giocare nella mini-griglia in basso
+            a destra del tabellone grande.
+          </li>
+          <li>
+            <b>Se una mini-griglia è già vinta o piena:</b>
+            L'avversario può giocare in qualsiasi altra mini-griglia ancora
+            aperta.
+          </li>
+          <li>
+            <b>Vittoria di una mini-griglia:</b>
+            quando un giocatore completa un tris dentro una mini-griglia,
+            conquista quella griglia
+          </li>
+          <li>
+            <b>Fine della partita:</b>
+            Vince il giocatore che conquista tre mini-griglie allineate (come in
+            un tris normale).
+          </li>
+          <li>
+            Se tutte le mini-griglie vengono completate senza un vincitore, la
+            partita termina in pareggio.
+          </li>
+        </ol>
+        <button class="close-btn" onclick="chiudiSpiegazioni()">
+          Inizia a Giocare!
+        </button>
+      </div>
     </div>
 
-    <script src="game_logic.js"></script>
-</body>
+    <!-- Modal Vittoria -->
+    <div id="vittoria" class="modal-overlay hidden">
+      <div class="modal-content victory-content">
+        <div class="victory-title">🎉 VITTORIA! 🎉</div>
+        <div class="winner-symbol" id="winner-symbol">O</div>
+        <div class="victory-subtitle">
+          Il giocatore <span id="winner-name">O</span> ha conquistato il Super
+          Tris!
+        </div>
+        <div>
+          <button class="close-btn" onclick="nuovaPartita()">
+            🎮 Nuova Partita
+          </button>
+          <button class="secondary-btn" onclick="mostraRegole()">
+            📋 Rivedi Regole
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./game-logic.js"></script>
+  </body>
 </html>

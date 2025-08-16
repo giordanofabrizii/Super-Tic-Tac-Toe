@@ -1,86 +1,342 @@
-*{
-    box-sizing: border-box;
-    margin: 0;
-    background-color: rgb(84, 82, 187);
-    user-select: none;
-    font-family: 'Finger Paint', cursive;
-    color: #F2C14E;
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-cell: #16213e;
+  --bg-selected: #0f3460;
+  --text-primary: #e94560;
+  --text-secondary: #f39c12;
+  --border-color: #533483;
+  --white: #ffffff;
 }
 
-body{
-    align-items: center;
-    justify-content: center;
-    display: flex;
-    flex-direction: column;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-h1{
-    text-align: center;
-    line-height: 80px;
-    font-size: 54px;
+body {
+  background-color: var(--bg-primary);
+  color: var(--white);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-#matrice {
-    margin: auto;
-    margin-top: 30px;
-    height: 675px;
-    width: 675px;
-    display: grid;
-    grid-template-columns:  repeat(3, 1fr);
+header {
+  text-align: center;
+  padding: 20px;
+  background-color: var(--bg-cell);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.casellaGrande{
-    height: 225px;
-    width: 225px;
-    border: 2px solid #F2C14E;
-    border-left: none;
-    border-top: none;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    padding: 15px
-
+header h1 {
+  color: var(--text-primary);
+  font-size: 2.5em;
+  margin-bottom: 10px;
 }
 
-#matrice > :nth-child(3n) {
-    border-right: none;
+header h2 {
+  color: var(--white);
+  font-size: 1.2em;
 }
 
-#matrice > :nth-child(n + 7) {
-    border-bottom: none;
+#giocatore_attuale {
+  color: var(--text-secondary);
+  font-weight: bold;
 }
 
-.casellaPiccola {
-    height: 65px;
-    width: 65px;
-    border: 2px solid #F2C14E;
-    margin: 0;
-    border-left: none;
-    border-top: none;
-    font-size: 45px;
-    text-align: center;
+main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
 }
 
-.casellaGrande > :nth-child(3n) {
-    border-right: none;
+#game-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background-color: var(--border-color);
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
-.casellaGrande > :nth-child(n + 7) {
-    border-bottom: none;
+.big-tris {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background-color: var(--border-color);
+  padding: 4px;
+  border-radius: 8px;
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-button {
-    padding: 10px 20px;
-    border-radius: 10px;
-    background-color: #F2C14E;
-    color: #333;
-    border-color: #F2C14E;
-    font-size: 18px;
-    transition: 200ms transform;
-    font-weight: 600;
-    margin-top: 10px;
+.big-tris.toPlay {
+  background-color: var(--bg-selected);
+  box-shadow: 0 0 15px rgba(15, 52, 96, 0.6);
+  transform: scale(1.02);
 }
 
-button:hover {
-    cursor: pointer;
-    transform: translateY(-2px);
+.small-tris {
+  width: 60px;
+  height: 60px;
+  background-color: var(--bg-cell);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.small-tris:hover {
+  background-color: var(--bg-selected);
+  border-color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+segno {
+  font-size: 28px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+segno.o {
+  color: var(--text-primary);
+}
+
+segno.x {
+  color: var(--text-secondary);
+}
+
+bigsegno {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--bg-cell);
+  border-radius: 8px;
+  font-size: 80px;
+  font-weight: bold;
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: 10;
+}
+
+bigsegno.o {
+  color: var(--text-primary);
+}
+
+bigsegno.x {
+  color: var(--text-secondary);
+}
+
+footer {
+  text-align: center;
+  padding: 15px;
+  background-color: var(--bg-cell);
+  border-top: 1px solid var(--border-color);
+}
+
+footer a {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+footer a:hover {
+  color: var(--text-secondary);
+}
+
+/* Modal Styles Condivisi */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-content {
+  background-color: var(--bg-cell);
+  padding: 40px;
+  border-radius: 15px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--border-color);
+  position: relative;
+  text-align: center;
+}
+
+.modal-content h2 {
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 2em;
+}
+
+.modal-content ol {
+  margin-left: 20px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.modal-content li {
+  margin-bottom: 15px;
+  color: var(--white);
+}
+
+.modal-content b {
+  color: var(--text-secondary);
+}
+
+.close-btn {
+  background-color: var(--text-primary);
+  color: var(--white);
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  display: inline-block;
+  margin: 15px 10px 0;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: var(--text-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+}
+
+.secondary-btn {
+  background-color: var(--border-color);
+  color: var(--white);
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  display: inline-block;
+  margin: 15px 10px 0;
+  transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background-color: var(--bg-selected);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(83, 52, 131, 0.3);
+}
+
+/* Schermata Vittoria Specifica */
+.victory-content {
+  max-width: 500px;
+}
+
+.winner-symbol {
+  font-size: 120px;
+  font-weight: bold;
+  margin: 20px 0;
+  text-shadow: 0 0 30px currentColor;
+}
+
+.winner-symbol.o {
+  color: var(--text-primary);
+}
+
+.winner-symbol.x {
+  color: var(--text-secondary);
+}
+
+.victory-title {
+  font-size: 3em;
+  margin-bottom: 10px;
+  background: linear-gradient(
+    45deg,
+    var(--text-primary),
+    var(--text-secondary)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.victory-subtitle {
+  font-size: 1.5em;
+  color: var(--white);
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 768px) {
+  .small-tris {
+    width: 45px;
+    height: 45px;
+  }
+
+  segno {
+    font-size: 22px;
+  }
+
+  bigsegno {
+    font-size: 60px;
+  }
+
+  .modal-content {
+    padding: 25px;
+    margin: 10px;
+  }
+
+  .victory-title {
+    font-size: 2.5em;
+  }
+
+  .winner-symbol {
+    font-size: 80px;
+  }
 }
