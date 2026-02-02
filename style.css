@@ -6,6 +6,9 @@
   --text-secondary: #f39c12;
   --border-color: #533483;
   --white: #ffffff;
+  --success: #2ecc71;
+  --warning: #f39c12;
+  --danger: #e74c3c;
 }
 
 * {
@@ -21,6 +24,90 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* ============================================
+   BARRA ONLINE
+   ============================================ */
+.online-bar {
+  background-color: var(--bg-cell);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.online-info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+.status-dot.connected {
+  background-color: var(--success);
+}
+
+.status-dot.waiting {
+  background-color: var(--warning);
+}
+
+.status-dot.disconnected {
+  background-color: var(--danger);
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.game-code-label {
+  font-size: 14px;
+  color: var(--white);
+}
+
+.game-code-label strong {
+  color: var(--text-secondary);
+  font-family: monospace;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+.exit-btn {
+  background-color: var(--danger);
+  color: var(--white);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.exit-btn:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
 }
 
 header {
@@ -162,7 +249,9 @@ footer a:hover {
   color: var(--text-secondary);
 }
 
-/* Modal Styles Condivisi */
+/* ============================================
+   MODAL STYLES
+   ============================================ */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -203,6 +292,13 @@ footer a:hover {
   font-size: 2em;
 }
 
+.modal-subtitle {
+  color: var(--white);
+  opacity: 0.8;
+  margin-bottom: 25px;
+  font-size: 1.1em;
+}
+
 .modal-content ol {
   margin-left: 20px;
   line-height: 1.6;
@@ -218,6 +314,201 @@ footer a:hover {
   color: var(--text-secondary);
 }
 
+/* ============================================
+   MODE SELECTION
+   ============================================ */
+.mode-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.mode-btn {
+  background-color: var(--bg-selected);
+  border: 2px solid var(--border-color);
+  color: var(--white);
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.mode-btn:hover {
+  background-color: var(--border-color);
+  border-color: var(--text-primary);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.3);
+}
+
+.mode-icon {
+  font-size: 2.5em;
+}
+
+.mode-title {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: var(--text-secondary);
+}
+
+.mode-desc {
+  font-size: 0.9em;
+  opacity: 0.8;
+}
+
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px;
+  transition: color 0.3s ease;
+}
+
+.text-btn:hover {
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   JOIN MODAL
+   ============================================ */
+.code-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 15px;
+  font-size: 1.5em;
+  text-align: center;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--white);
+  font-family: monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+}
+
+.code-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ============================================
+   WAITING MODAL
+   ============================================ */
+.waiting-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
+}
+
+.game-code-display {
+  width: 100%;
+}
+
+.code-label {
+  font-size: 1.1em;
+  color: var(--white);
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.code-box {
+  background-color: var(--bg-primary);
+  border: 3px solid var(--text-primary);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.code-box span {
+  font-size: 2.5em;
+  font-family: monospace;
+  letter-spacing: 3px;
+  color: var(--text-secondary);
+  font-weight: bold;
+}
+
+.copy-btn {
+  background-color: var(--border-color);
+  color: var(--white);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.copy-btn:hover {
+  background-color: var(--bg-selected);
+  transform: translateY(-2px);
+}
+
+.waiting-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#waiting-message {
+  font-size: 1.1em;
+  color: var(--white);
+}
+
+.waiting-info {
+  font-size: 0.9em;
+  color: var(--white);
+  opacity: 0.7;
+  line-height: 1.6;
+}
+
+.share-link {
+  color: var(--text-secondary);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
 .close-btn {
   background-color: var(--text-primary);
   color: var(--white);
@@ -258,6 +549,9 @@ footer a:hover {
   box-shadow: 0 4px 15px rgba(83, 52, 131, 0.3);
 }
 
+/* ============================================
+   VICTORY MODAL
+   ============================================ */
 .victory-content {
   max-width: 500px;
 }
@@ -298,6 +592,9 @@ footer a:hover {
   opacity: 0.9;
 }
 
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -317,8 +614,22 @@ footer a:hover {
   }
 }
 
-/* Media Queries per dispositivi mobili */
+/* ============================================
+   MEDIA QUERIES
+   ============================================ */
 @media (max-width: 768px) {
+  .online-bar {
+    padding: 10px 15px;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .online-info {
+    gap: 15px;
+    font-size: 12px;
+  }
+
   header {
     padding: 15px 10px;
   }
@@ -372,6 +683,14 @@ footer a:hover {
     font-size: 14px;
     margin: 10px 5px 0;
   }
+
+  .code-input {
+    font-size: 1.2em;
+  }
+
+  .code-box span {
+    font-size: 1.8em;
+  }
 }
 
 @media (max-width: 480px) {
@@ -392,5 +711,17 @@ footer a:hover {
 
   main {
     padding: 5px;
+  }
+
+  .mode-btn {
+    padding: 15px;
+  }
+
+  .mode-icon {
+    font-size: 2em;
+  }
+
+  .mode-title {
+    font-size: 1.1em;
   }
 }
