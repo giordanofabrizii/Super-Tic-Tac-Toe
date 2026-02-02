@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
@@ -42,9 +42,7 @@
           <button class="mode-btn local-btn" onclick="playLocal()">
             <span class="mode-icon">🎮</span>
             <span class="mode-title">Gioca in Locale</span>
-            <span class="mode-desc"
-              >Due giocatori sullo stesso dispositivo</span
-            >
+            <span class="mode-desc">Due giocatori sullo stesso dispositivo</span>
           </button>
           <button class="mode-btn create-btn" onclick="showCreateGame()">
             <span class="mode-icon">🌐</span>
@@ -80,13 +78,7 @@
           <button class="close-btn" onclick="submitJoinGame()">
             🚀 Connetti
           </button>
-          <button
-            class="secondary-btn"
-            onclick="
-              hideModal('join-modal');
-              showModeSelection();
-            "
-          >
+          <button class="secondary-btn" onclick="hideModal('join-modal'); showModeSelection()">
             ← Indietro
           </button>
         </div>
@@ -103,11 +95,7 @@
             <div class="code-box">
               <span id="game-code-display">----</span>
             </div>
-            <button
-              class="copy-btn"
-              id="copy-code-btn"
-              onclick="copyGameCode()"
-            >
+            <button class="copy-btn" id="copy-code-btn" onclick="copyGameCode()">
               📋 Copia Codice
             </button>
           </div>
@@ -121,7 +109,9 @@
             <a id="share-link" class="share-link" href="#"></a>
           </p>
         </div>
-        <button class="secondary-btn" onclick="exitGame()">Annulla</button>
+        <button class="secondary-btn" onclick="exitGame()">
+          Annulla
+        </button>
       </div>
     </div>
 
@@ -162,13 +152,7 @@
             partita termina in pareggio.
           </li>
         </ol>
-        <button
-          class="close-btn"
-          onclick="
-            chiudiSpiegazioni();
-            showModeSelection();
-          "
-        >
+        <button class="close-btn" onclick="chiudiSpiegazioni(); showModeSelection()">
           Inizia a Giocare!
         </button>
       </div>
@@ -194,6 +178,7 @@
       </div>
     </div>
 
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="./game-logic.js"></script>
     <script src="./multiplayer.js"></script>
   </body>

@@ -75,9 +75,10 @@ function handleClick(cella, isRemote = false) {
   let [big, small] = returnTris(cella.id);
   let matriceEl = document.querySelectorAll("bigTris");
 
-  // In modalità online, verifica che sia il turno del giocatore
+  // In modalità online e NON è una mossa remota, verifica che sia il turno del giocatore
   if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
     if (typeof myPlayer !== 'undefined' && GIOCATORE !== myPlayer) {
+      console.log('Non è il tuo turno! GIOCATORE:', GIOCATORE, 'myPlayer:', myPlayer);
       return; // Non è il tuo turno
     }
   }

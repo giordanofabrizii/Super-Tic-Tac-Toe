@@ -1,14 +1,12 @@
 {
   "name": "Super-Tic-Tac-Toe",
-  "version": "3.0.0",
-  "description": "Super Tris multiplayer con WebRTC",
+  "version": "1.0.0",
+  "description": "Super Tris multiplayer con WebRTC e PeerJS",
   "scripts": {
-    "dev": "netlify dev"
+    "dev": "npx http-server -p 8888"
   },
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "netlify-cli": "^17.0.0"
+    "http-server": "^14.1.1"
   }
 }

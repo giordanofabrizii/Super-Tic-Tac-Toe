@@ -1,21 +1,13 @@
 // ============================================
-// MULTIPLAYER.JS - Gestione WebRTC e Online
+// MULTIPLAYER.JS - Gestione WebRTC con PeerJS
 // ============================================
 
-let peerConnection = null;
-let dataChannel = null;
+let peer = null;
+let conn = null;
 let currentGameId = null;
 let myPlayer = null; // "O" o "X"
 let isHost = false;
 let isOnlineMode = false;
-
-// Configurazione STUN (server pubblico Google)
-const rtcConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
-};
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -54,108 +46,86 @@ function updateConnectionStatus(status, message) {
 }
 
 // ============================================
-// NETLIFY FUNCTIONS API
+// PEERJS SETUP
 // ============================================
 
-async function storeOffer(gameId, offer) {
-  const response = await fetch('/.netlify/functions/store-offer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId, offer })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Impossibile salvare l\'offerta');
-  }
-  
-  return await response.json();
-}
-
-async function getOffer(gameId) {
-  const response = await fetch(`/.netlify/functions/get-offer?gameId=${gameId}`);
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Partita non trovata');
-    }
-    throw new Error('Impossibile recuperare l\'offerta');
-  }
-  
-  return await response.json();
-}
-
-async function storeAnswer(gameId, answer) {
-  const response = await fetch('/.netlify/functions/store-answer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId, answer })
-  });
-  
-  if (!response.ok) {
-    throw new Error('Impossibile salvare la risposta');
-  }
-  
-  return await response.json();
-}
-
-async function getAnswer(gameId) {
-  const response = await fetch(`/.netlify/functions/get-answer?gameId=${gameId}`);
-  
-  if (!response.ok) {
-    return null; // Answer non ancora disponibile
-  }
-  
-  return await response.json();
-}
-
-// ============================================
-// WEBRTC SETUP
-// ============================================
-
-function setupPeerConnection() {
-  peerConnection = new RTCPeerConnection(rtcConfig);
-  
-  peerConnection.onicecandidate = (event) => {
-    // ICE candidates sono già inclusi nell'SDP
-  };
-  
-  peerConnection.onconnectionstatechange = () => {
-    console.log('Connection state:', peerConnection.connectionState);
-    
-    if (peerConnection.connectionState === 'connected') {
-      updateConnectionStatus('connected', '📡 Connesso');
-      hideModal('waiting-modal');
-      
-      // Se sono l'host, inizializzo il gioco
-      if (isHost) {
-        generateTable();
+function initializePeer(peerId) {
+  return new Promise((resolve, reject) => {
+    // Usa il server cloud ufficiale di PeerJS
+    peer = new Peer(peerId, {
+      host: '0.peerjs.com',
+      secure: true,
+      port: 443,
+      path: '/',
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
       }
-    } else if (peerConnection.connectionState === 'disconnected' || 
-               peerConnection.connectionState === 'failed') {
-      updateConnectionStatus('disconnected', '⚠️ Disconnesso');
-      showError('Connessione persa. La partita è terminata.');
-    }
-  };
-  
-  peerConnection.ondatachannel = (event) => {
-    dataChannel = event.channel;
-    setupDataChannel();
-  };
+    });
+
+    peer.on('open', (id) => {
+      console.log('Peer connesso con ID:', id);
+      resolve(id);
+    });
+
+    peer.on('error', (err) => {
+      console.error('Errore peer:', err);
+      
+      // Se il server cloud fallisce, prova senza specificare host (usa default)
+      if (err.type === 'network' || err.type === 'server-error') {
+        console.log('Tentativo con configurazione di fallback...');
+        peer = new Peer(peerId);
+        
+        peer.on('open', (id) => {
+          console.log('Peer connesso (fallback) con ID:', id);
+          resolve(id);
+        });
+        
+        peer.on('error', (fallbackErr) => {
+          reject(fallbackErr);
+        });
+      } else {
+        reject(err);
+      }
+    });
+
+    peer.on('connection', (connection) => {
+      console.log('Ricevuta connessione in arrivo');
+      conn = connection;
+      setupConnection();
+    });
+  });
 }
 
-function setupDataChannel() {
-  dataChannel.onopen = () => {
-    console.log('Data channel aperto');
-  };
-  
-  dataChannel.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    handleRemoteMessage(message);
-  };
-  
-  dataChannel.onerror = (error) => {
-    console.error('Data channel error:', error);
-  };
+function setupConnection() {
+  conn.on('open', () => {
+    console.log('Connessione aperta');
+    updateConnectionStatus('connected', '📡 Connesso');
+    hideModal('waiting-modal');
+    
+    // Se sono l'host, inizializzo il gioco e notifico il joiner
+    if (isHost) {
+      generateTable();
+      conn.send({ type: 'init' });
+    }
+  });
+
+  conn.on('data', (data) => {
+    handleRemoteMessage(data);
+  });
+
+  conn.on('close', () => {
+    console.log('Connessione chiusa');
+    updateConnectionStatus('disconnected', '⚠️ Disconnesso');
+    showError('Connessione persa. La partita è terminata.');
+  });
+
+  conn.on('error', (err) => {
+    console.error('Errore connessione:', err);
+    showError('Errore di connessione: ' + err.message);
+  });
 }
 
 // ============================================
@@ -180,68 +150,16 @@ async function createOnlineGame() {
     
     updateConnectionStatus('waiting', '⏳ In attesa avversario...');
     
-    // Setup WebRTC
-    setupPeerConnection();
+    // Inizializza peer con il gameId come ID
+    await initializePeer(currentGameId);
     
-    // Crea data channel (solo l'host lo crea)
-    dataChannel = peerConnection.createDataChannel('game');
-    setupDataChannel();
-    
-    // Crea offer
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    
-    // Aspetta che ICE gathering sia completo
-    await new Promise((resolve) => {
-      if (peerConnection.iceGatheringState === 'complete') {
-        resolve();
-      } else {
-        peerConnection.addEventListener('icegatheringstatechange', () => {
-          if (peerConnection.iceGatheringState === 'complete') {
-            resolve();
-          }
-        });
-      }
-    });
-    
-    // Salva offer su Netlify
-    await storeOffer(currentGameId, peerConnection.localDescription);
-    
-    // Poll per l'answer
-    pollForAnswer();
+    console.log('In attesa di connessioni...');
     
   } catch (error) {
     console.error('Errore creazione partita:', error);
     showError('Errore durante la creazione della partita: ' + error.message);
     hideModal('waiting-modal');
   }
-}
-
-async function pollForAnswer() {
-  const maxAttempts = 60; // 60 secondi
-  let attempts = 0;
-  
-  const interval = setInterval(async () => {
-    attempts++;
-    
-    if (attempts > maxAttempts) {
-      clearInterval(interval);
-      showError('Timeout: nessun avversario si è unito.');
-      hideModal('waiting-modal');
-      return;
-    }
-    
-    try {
-      const result = await getAnswer(currentGameId);
-      
-      if (result && result.answer) {
-        clearInterval(interval);
-        await peerConnection.setRemoteDescription(result.answer);
-      }
-    } catch (error) {
-      // Answer non ancora disponibile, continua polling
-    }
-  }, 1000);
 }
 
 // ============================================
@@ -259,32 +177,18 @@ async function joinOnlineGame(gameId) {
     document.getElementById('game-code-display').textContent = gameId;
     updateConnectionStatus('waiting', '⏳ Connessione in corso...');
     
-    // Setup WebRTC
-    setupPeerConnection();
+    // Genera un ID casuale per il joiner
+    const myPeerId = 'joiner-' + Math.random().toString(36).substr(2, 9);
     
-    // Recupera offer
-    const { offer } = await getOffer(gameId);
-    await peerConnection.setRemoteDescription(offer);
+    // Inizializza peer
+    await initializePeer(myPeerId);
     
-    // Crea answer
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    
-    // Aspetta ICE gathering
-    await new Promise((resolve) => {
-      if (peerConnection.iceGatheringState === 'complete') {
-        resolve();
-      } else {
-        peerConnection.addEventListener('icegatheringstatechange', () => {
-          if (peerConnection.iceGatheringState === 'complete') {
-            resolve();
-          }
-        });
-      }
+    // Connetti all'host usando il gameId
+    conn = peer.connect(gameId, {
+      reliable: true
     });
     
-    // Salva answer
-    await storeAnswer(gameId, peerConnection.localDescription);
+    setupConnection();
     
   } catch (error) {
     console.error('Errore unione partita:', error);
@@ -298,7 +202,7 @@ async function joinOnlineGame(gameId) {
 // ============================================
 
 function sendRemoteMove(big, small) {
-  if (!isOnlineMode || !dataChannel || dataChannel.readyState !== 'open') {
+  if (!isOnlineMode || !conn || !conn.open) {
     return;
   }
   
@@ -312,7 +216,7 @@ function sendRemoteMove(big, small) {
     }
   };
   
-  dataChannel.send(JSON.stringify(message));
+  conn.send(message);
 }
 
 function handleRemoteMessage(message) {
@@ -332,14 +236,21 @@ function applyRemoteMove(big, small, player) {
   const cellId = big * 10 + small;
   const cella = document.getElementById(cellId);
   
-  if (!cella) return;
+  if (!cella) {
+    console.error('Cella non trovata:', cellId);
+    return;
+  }
   
-  // Simula il click chiamando handleClick
-  // Ma prima impostiamo temporaneamente GIOCATORE al player remoto
-  const oldPlayer = GIOCATORE;
-  GIOCATORE = player;
-  handleClick(cella, true); // true = è una mossa remota
-  GIOCATORE = oldPlayer; // Ripristina (anche se handleClick lo cambia già)
+  console.log('Applico mossa remota:', { big, small, player, currentGIOCATORE: GIOCATORE });
+  
+  // Verifica che sia il turno corretto
+  if (GIOCATORE !== player) {
+    console.error('Turno non corretto! Atteso:', GIOCATORE, 'Ricevuto:', player);
+    return;
+  }
+  
+  // Simula il click - handleClick cambierà automaticamente GIOCATORE
+  handleClick(cella, true);
 }
 
 // ============================================
@@ -402,11 +313,11 @@ function copyGameCode() {
 
 function exitGame() {
   if (confirm('Sei sicuro di voler uscire dalla partita?')) {
-    if (peerConnection) {
-      peerConnection.close();
+    if (conn) {
+      conn.close();
     }
-    if (dataChannel) {
-      dataChannel.close();
+    if (peer) {
+      peer.destroy();
     }
     
     isOnlineMode = false;
