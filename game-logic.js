@@ -35,7 +35,13 @@ function mostraVittoria(vincitore) {
 
 function nuovaPartita() {
   chiudiVittoria();
-  generateTable();
+  
+  // In modalità online, esci e torna alla selezione
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode) {
+    exitGame();
+  } else {
+    generateTable();
+  }
 }
 
 function mostraRegole() {
@@ -65,9 +71,16 @@ function returnTris(numero) {
   return [big, small];
 }
 
-function handleClick(cella) {
+function handleClick(cella, isRemote = false) {
   let [big, small] = returnTris(cella.id);
   let matriceEl = document.querySelectorAll("bigTris");
+
+  // In modalità online, verifica che sia il turno del giocatore
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
+    if (typeof myPlayer !== 'undefined' && GIOCATORE !== myPlayer) {
+      return; // Non è il tuo turno
+    }
+  }
 
   // controlla se cliccato, se ha la classe toPlay o se è già completato
   if (
@@ -89,6 +102,13 @@ function handleClick(cella) {
   segno.classList.add(GIOCATORE.toLowerCase());
   cella.appendChild(segno);
   MATRICE[big][small] = GIOCATORE;
+
+  // Se modalità online e NON è una mossa remota, invia la mossa
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
+    if (typeof sendRemoteMove === 'function') {
+      sendRemoteMove(big, small);
+    }
+  }
 
   let trisGrande = matriceEl[big];
   let vincitore = checkWin(MATRICE[big]);
@@ -155,6 +175,15 @@ function reset() {
 
 function generateTable() {
   reset();
+  
+  // In modalità online, mostra l'UI online
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode) {
+    document.getElementById('online-ui').classList.remove('hidden');
+    if (typeof currentGameId !== 'undefined' && currentGameId) {
+      document.getElementById('current-game-code').textContent = currentGameId;
+    }
+  }
+  
   for (let i = 0; i < 9; i++) {
     // Big tris
     const tris = document.createElement("bigTris");
@@ -177,5 +206,5 @@ function generateTable() {
   }
 }
 
-// Inizializza il gioco quando la pagina è caricata
-generateTable();
+// NON inizializza più automaticamente - ora gestito da multiplayer.js
+// generateTable();

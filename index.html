@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
@@ -8,9 +8,23 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- Barra superiore online (nascosta di default) -->
+    <div id="online-ui" class="online-bar hidden">
+      <div class="online-info">
+        <span class="status-indicator">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="connection-status">Offline</span>
+        </span>
+        <span class="game-code-label">
+          Codice: <strong id="current-game-code"></strong>
+        </span>
+      </div>
+      <button class="exit-btn" onclick="exitGame()">✕ Esci</button>
+    </div>
+
     <header>
       <h1>Super Tris</h1>
-      <h2>Giocatore: <span id="giocatore_attuale"></span></h2>
+      <h2>Giocatore: <span id="giocatore_attuale">O</span></h2>
     </header>
     <main>
       <div id="game-container"></div>
@@ -19,8 +33,100 @@
       <a href="https://www.github.com/giordanofabrizii">@giordanofabrizii</a>
     </footer>
 
+    <!-- Modal Selezione Modalità -->
+    <div id="mode-selection-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h2>Super Tris</h2>
+        <p class="modal-subtitle">Scegli come giocare</p>
+        <div class="mode-buttons">
+          <button class="mode-btn local-btn" onclick="playLocal()">
+            <span class="mode-icon">🎮</span>
+            <span class="mode-title">Gioca in Locale</span>
+            <span class="mode-desc"
+              >Due giocatori sullo stesso dispositivo</span
+            >
+          </button>
+          <button class="mode-btn create-btn" onclick="showCreateGame()">
+            <span class="mode-icon">🌐</span>
+            <span class="mode-title">Crea Partita Online</span>
+            <span class="mode-desc">Genera un codice per il tuo amico</span>
+          </button>
+          <button class="mode-btn join-btn" onclick="showJoinGame()">
+            <span class="mode-icon">🔗</span>
+            <span class="mode-title">Unisciti a Partita</span>
+            <span class="mode-desc">Inserisci il codice partita</span>
+          </button>
+        </div>
+        <button class="text-btn" onclick="mostraRegole()">
+          📋 Come si gioca
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Unisciti a Partita -->
+    <div id="join-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h2>Unisciti a Partita</h2>
+        <p class="modal-subtitle">Inserisci il codice ricevuto dal tuo amico</p>
+        <input
+          type="text"
+          id="join-code-input"
+          class="code-input"
+          placeholder="PS7K-2M9N"
+          maxlength="9"
+          autocomplete="off"
+        />
+        <div class="modal-buttons">
+          <button class="close-btn" onclick="submitJoinGame()">
+            🚀 Connetti
+          </button>
+          <button
+            class="secondary-btn"
+            onclick="
+              hideModal('join-modal');
+              showModeSelection();
+            "
+          >
+            ← Indietro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal In Attesa -->
+    <div id="waiting-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h2>Partita Online</h2>
+        <div class="waiting-content">
+          <div class="game-code-display">
+            <p class="code-label">Codice Partita</p>
+            <div class="code-box">
+              <span id="game-code-display">----</span>
+            </div>
+            <button
+              class="copy-btn"
+              id="copy-code-btn"
+              onclick="copyGameCode()"
+            >
+              📋 Copia Codice
+            </button>
+          </div>
+          <div class="waiting-status">
+            <div class="spinner"></div>
+            <p id="waiting-message">In attesa dell'avversario...</p>
+          </div>
+          <p class="waiting-info">
+            Condividi questo codice con il tuo amico oppure invia questo link:
+            <br />
+            <a id="share-link" class="share-link" href="#"></a>
+          </p>
+        </div>
+        <button class="secondary-btn" onclick="exitGame()">Annulla</button>
+      </div>
+    </div>
+
     <!-- Modal Spiegazioni -->
-    <div id="spiegazioni" class="modal-overlay">
+    <div id="spiegazioni" class="modal-overlay hidden">
       <div class="modal-content">
         <h2>Regole del Gioco</h2>
         <ol>
@@ -56,7 +162,13 @@
             partita termina in pareggio.
           </li>
         </ol>
-        <button class="close-btn" onclick="chiudiSpiegazioni()">
+        <button
+          class="close-btn"
+          onclick="
+            chiudiSpiegazioni();
+            showModeSelection();
+          "
+        >
           Inizia a Giocare!
         </button>
       </div>
@@ -83,5 +195,6 @@
     </div>
 
     <script src="./game-logic.js"></script>
+    <script src="./multiplayer.js"></script>
   </body>
 </html>
