@@ -1,15 +1,4 @@
-// In-memory storage (resetta ad ogni cold start)
-const games = new Map();
-
-// Pulizia automatica delle partite vecchie (>30 minuti)
-setInterval(() => {
-  const now = Date.now();
-  for (const [gameId, game] of games.entries()) {
-    if (now - game.timestamp > 30 * 60 * 1000) {
-      games.delete(gameId);
-    }
-  }
-}, 5 * 60 * 1000); // ogni 5 minuti
+const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event) => {
   // CORS headers
@@ -44,8 +33,10 @@ exports.handler = async (event) => {
       };
     }
 
-    // Salva l'offer in memoria
-    games.set(gameId, {
+    // Usa Netlify Blob Store
+    const store = getStore('games');
+    
+    await store.setJSON(gameId, {
       offer,
       answer: null,
       timestamp: Date.now()
