@@ -1,5 +1,4 @@
-// Stesso storage in-memory
-const games = new Map();
+const { getStore } = require('@netlify/blobs');
 
 exports.handler = async (event) => {
   const headers = {
@@ -32,7 +31,9 @@ exports.handler = async (event) => {
       };
     }
 
-    const game = games.get(gameId);
+    // Usa Netlify Blob Store
+    const store = getStore('games');
+    const game = await store.get(gameId, { type: 'json' });
 
     if (!game) {
       return {
@@ -42,9 +43,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // Salva l'answer
+    // Aggiorna con answer
     game.answer = answer;
-    games.set(gameId, game);
+    await store.setJSON(gameId, game);
 
     return {
       statusCode: 200,
