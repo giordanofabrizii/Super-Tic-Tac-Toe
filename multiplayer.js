@@ -1,358 +1,446 @@
-// ============================================
-// MULTIPLAYER.JS - Gestione WebRTC con PeerJS
-// ============================================
-
+// L'host conserva la cronologia autorevole. L'ospite invia richieste di mossa
+// e ricostruisce il tabellone dagli snapshot ricevuti, anche dopo una riconnessione.
 let peer = null;
 let conn = null;
 let currentGameId = null;
-let myPlayer = null; // "O" o "X"
+let myPlayer = null;
 let isHost = false;
 let isOnlineMode = false;
+let guestToken = null;
+let acceptedGuestToken = null;
+let moves = [];
+let reconnectTimer = null;
+let connectionTimer = null;
+let pendingMove = false;
+let generation = 0;
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
+const STORAGE_KEY = 'super-tris-session-v2';
+const PEER_OPTIONS = {
+  host: '0.peerjs.com',
+  secure: true,
+  port: 443,
+  path: '/',
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  }
+};
 
 function generateGameId() {
   const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789';
-  let id = '';
-  for (let i = 0; i < 4; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((value, index) =>
+    (index === 4 ? '-' : '') + chars[value % chars.length]
+  ).join('');
+}
+
+function makeToken() {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    [...crypto.getRandomValues(new Uint8Array(16))].map(n => n.toString(16).padStart(2, '0')).join('');
+}
+
+function validGameId(value) {
+  return /^[A-NP-Z2-9]{4}-[A-NP-Z2-9]{4}$/.test(value);
+}
+
+function saveSession() {
+  if (!isOnlineMode) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      gameId: currentGameId,
+      isHost,
+      guestToken,
+      acceptedGuestToken,
+      moves
+    }));
+  } catch (error) {
+    console.warn('Impossibile salvare la partita nel browser', error);
   }
-  id += '-';
-  for (let i = 0; i < 4; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
+}
+
+function readSession() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!data || !validGameId(data.gameId) || typeof data.isHost !== 'boolean' ||
+        !Array.isArray(data.moves)) return null;
+    return data;
+  } catch {
+    return null;
   }
-  return id;
+}
+
+function updateConnectionStatus(status, message) {
+  document.getElementById('connection-status').textContent = message;
+  document.getElementById('status-dot').className = 'status-dot ' + status;
+  document.getElementById('waiting-message').textContent = message;
+}
+
+function showModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function hideModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showModeSelection() {
+  showModal('mode-selection-modal');
+  const session = readSession();
+  const resume = document.getElementById('resume-game-btn');
+  resume.classList.toggle('hidden', !session);
+  if (session) document.getElementById('resume-code').textContent = session.gameId;
 }
 
 function showError(message) {
   alert(message);
 }
 
-function updateConnectionStatus(status, message) {
-  const statusEl = document.getElementById('connection-status');
-  const statusDot = document.getElementById('status-dot');
-  
-  statusEl.textContent = message;
-  
-  if (status === 'connected') {
-    statusDot.className = 'status-dot connected';
-  } else if (status === 'waiting') {
-    statusDot.className = 'status-dot waiting';
-  } else {
-    statusDot.className = 'status-dot disconnected';
+function updateRoomUI() {
+  document.getElementById('online-ui').classList.remove('hidden');
+  document.getElementById('current-game-code').textContent = currentGameId;
+  document.getElementById('game-code-display').textContent = currentGameId;
+  const url = new URL(window.location.href);
+  url.searchParams.set('game', currentGameId);
+  const link = document.getElementById('share-link');
+  link.href = url.href;
+  link.textContent = url.href;
+  document.getElementById('waiting-info').classList.toggle('hidden', !isHost);
+  document.getElementById('copy-code-btn').classList.toggle('hidden', !isHost);
+  history.replaceState(null, '', url.href);
+}
+
+function clearTimers() {
+  clearTimeout(reconnectTimer);
+  clearTimeout(connectionTimer);
+}
+
+function disposeConnection() {
+  clearTimers();
+  if (conn) {
+    const old = conn;
+    conn = null;
+    old.close();
+  }
+  if (peer) {
+    const old = peer;
+    peer = null;
+    old.destroy();
   }
 }
 
-// ============================================
-// PEERJS SETUP
-// ============================================
-
-function initializePeer(peerId) {
-  return new Promise((resolve, reject) => {
-    // Usa il server cloud ufficiale di PeerJS
-    peer = new Peer(peerId, {
-      host: '0.peerjs.com',
-      secure: true,
-      port: 443,
-      path: '/',
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
-    });
-
-    peer.on('open', (id) => {
-      console.log('Peer connesso con ID:', id);
-      resolve(id);
-    });
-
-    peer.on('error', (err) => {
-      console.error('Errore peer:', err);
-      
-      // Se il server cloud fallisce, prova senza specificare host (usa default)
-      if (err.type === 'network' || err.type === 'server-error') {
-        console.log('Tentativo con configurazione di fallback...');
-        peer = new Peer(peerId);
-        
-        peer.on('open', (id) => {
-          console.log('Peer connesso (fallback) con ID:', id);
-          resolve(id);
-        });
-        
-        peer.on('error', (fallbackErr) => {
-          reject(fallbackErr);
-        });
-      } else {
-        reject(err);
-      }
-    });
-
-    peer.on('connection', (connection) => {
-      console.log('Ricevuta connessione in arrivo');
-      conn = connection;
-      setupConnection();
-    });
-  });
+function startSession(gameId, host, session = null) {
+  generation++;
+  disposeConnection();
+  isOnlineMode = true;
+  isHost = host;
+  myPlayer = host ? 'O' : 'X';
+  currentGameId = gameId;
+  guestToken = host ? null : (session?.guestToken || makeToken());
+  acceptedGuestToken = host ? (session?.acceptedGuestToken || null) : null;
+  moves = host && Array.isArray(session?.moves) ? session.moves : [];
+  pendingMove = false;
+  hideModal('mode-selection-modal');
+  hideModal('join-modal');
+  updateRoomUI();
+  saveSession();
+  if (!renderMoves(moves)) {
+    moves = [];
+    renderMoves(moves);
+    saveSession();
+  }
+  updateConnectionStatus('waiting', host ? 'In attesa dell’avversario…' : 'Connessione in corso…');
+  showModal('waiting-modal');
+  createPeer(generation);
 }
 
-function setupConnection() {
-  conn.on('open', () => {
-    console.log('Connessione aperta');
-    updateConnectionStatus('connected', '📡 Connesso');
-    hideModal('waiting-modal');
-    
-    // Se sono l'host, inizializzo il gioco e notifico il joiner
-    if (isHost) {
-      generateTable();
-      conn.send({ type: 'init' });
+function createPeer(run) {
+  if (run !== generation || !isOnlineMode) return;
+  if (peer && !peer.destroyed) {
+    if (peer.disconnected) {
+      try { peer.reconnect(); } catch (error) { console.warn(error); }
+    } else if (!isHost && peer.open && (!conn || !conn.open)) {
+      connectToHost(run);
     }
-  });
-
-  conn.on('data', (data) => {
-    handleRemoteMessage(data);
-  });
-
-  conn.on('close', () => {
-    console.log('Connessione chiusa');
-    updateConnectionStatus('disconnected', '⚠️ Disconnesso');
-    showError('Connessione persa. La partita è terminata.');
-  });
-
-  conn.on('error', (err) => {
-    console.error('Errore connessione:', err);
-    showError('Errore di connessione: ' + err.message);
-  });
-}
-
-// ============================================
-// CREA PARTITA (HOST)
-// ============================================
-
-async function createOnlineGame() {
-  try {
-    isHost = true;
-    isOnlineMode = true;
-    myPlayer = 'O'; // L'host è sempre O
-    currentGameId = generateGameId();
-    
-    showModal('waiting-modal');
-    document.getElementById('game-code-display').textContent = currentGameId;
-    
-    // Imposta il link condivisibile
-    const shareUrl = `${window.location.origin}${window.location.pathname}?game=${currentGameId}`;
-    const shareLinkEl = document.getElementById('share-link');
-    shareLinkEl.href = shareUrl;
-    shareLinkEl.textContent = shareUrl;
-    
-    updateConnectionStatus('waiting', '⏳ In attesa avversario...');
-    
-    // Inizializza peer con il gameId come ID
-    await initializePeer(currentGameId);
-    
-    console.log('In attesa di connessioni...');
-    
-  } catch (error) {
-    console.error('Errore creazione partita:', error);
-    showError('Errore durante la creazione della partita: ' + error.message);
-    hideModal('waiting-modal');
-  }
-}
-
-// ============================================
-// UNISCITI A PARTITA (JOINER)
-// ============================================
-
-async function joinOnlineGame(gameId) {
-  try {
-    isHost = false;
-    isOnlineMode = true;
-    myPlayer = 'X'; // Il joiner è sempre X
-    currentGameId = gameId;
-    
-    showModal('waiting-modal');
-    document.getElementById('game-code-display').textContent = gameId;
-    updateConnectionStatus('waiting', '⏳ Connessione in corso...');
-    
-    // Genera un ID casuale per il joiner
-    const myPeerId = 'joiner-' + Math.random().toString(36).substr(2, 9);
-    
-    // Inizializza peer
-    await initializePeer(myPeerId);
-    
-    // Connetti all'host usando il gameId
-    conn = peer.connect(gameId, {
-      reliable: true
-    });
-    
-    setupConnection();
-    
-  } catch (error) {
-    console.error('Errore unione partita:', error);
-    showError('Errore durante l\'unione alla partita: ' + error.message);
-    hideModal('waiting-modal');
-  }
-}
-
-// ============================================
-// INVIO E RICEZIONE MOSSE
-// ============================================
-
-function sendRemoteMove(big, small) {
-  if (!isOnlineMode || !conn || !conn.open) {
     return;
   }
-  
-  const message = {
-    type: 'move',
-    payload: {
-      big,
-      small,
-      player: myPlayer,
-      timestamp: Date.now()
+
+  const id = isHost ? currentGameId : 'super-tris-' + makeToken();
+  const instance = new Peer(id, PEER_OPTIONS);
+  peer = instance;
+
+  instance.on('open', () => {
+    if (run !== generation || peer !== instance) return;
+    if (!isHost && (!conn || !conn.open)) connectToHost(run);
+    if (isHost && (!conn || !conn.open)) {
+      updateConnectionStatus('waiting', 'In attesa dell’avversario…');
     }
-  };
-  
-  conn.send(message);
+  });
+  instance.on('connection', incoming => {
+    if (run !== generation || !isHost) {
+      incoming.close();
+      return;
+    }
+    setupConnection(incoming, run);
+  });
+  instance.on('disconnected', () => {
+    if (run !== generation) return;
+    if (!conn || !conn.open) updateConnectionStatus('waiting', 'Riconnessione al server…');
+    scheduleReconnect(run);
+  });
+  instance.on('error', error => {
+    if (run !== generation) return;
+    console.warn('PeerJS:', error);
+    if (error.type === 'unavailable-id') {
+      updateConnectionStatus('waiting', 'Codice ancora occupato. Nuovo tentativo tra poco…');
+      instance.destroy();
+      peer = null;
+      scheduleReconnect(run);
+      return;
+    }
+    scheduleReconnect(run);
+  });
+  instance.on('close', () => {
+    if (run !== generation || peer !== instance) return;
+    peer = null;
+    scheduleReconnect(run);
+  });
+}
+
+function scheduleReconnect(run) {
+  if (run !== generation || !isOnlineMode) return;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    if (run !== generation) return;
+    if (peer && !peer.destroyed && peer.disconnected) {
+      try { peer.reconnect(); } catch { peer.destroy(); peer = null; }
+    }
+    if (!peer || peer.destroyed) createPeer(run);
+    if (!isHost && peer?.open && (!conn || !conn.open)) connectToHost(run);
+    if (!conn?.open && (!isHost || !peer?.open)) scheduleReconnect(run);
+  }, 3000);
+}
+
+function connectToHost(run) {
+  if (run !== generation || isHost || !peer?.open || conn?.open) return;
+  if (conn) conn.close();
+  const outgoing = peer.connect(currentGameId, { reliable: true });
+  setupConnection(outgoing, run);
+  clearTimeout(connectionTimer);
+  connectionTimer = setTimeout(() => {
+    if (run === generation && conn === outgoing && !outgoing.open) {
+      outgoing.close();
+      scheduleReconnect(run);
+    }
+  }, 10000);
+}
+
+function setupConnection(connection, run) {
+  if (run !== generation) return;
+  if (conn && conn.open && conn !== connection) {
+    // La stessa stanza ammette un solo avversario alla volta.
+    connection.close();
+    return;
+  }
+  if (conn && conn !== connection) conn.close();
+  conn = connection;
+  connection.on('open', () => {
+    if (run !== generation || conn !== connection) return;
+    clearTimeout(connectionTimer);
+    if (isHost) {
+      updateConnectionStatus('waiting', 'Avversario collegato, sincronizzazione…');
+    } else {
+      connection.send({ type: 'hello', token: guestToken });
+      updateConnectionStatus('waiting', 'Sincronizzazione partita…');
+    }
+  });
+  connection.on('data', message => {
+    if (run === generation && conn === connection) handleRemoteMessage(message);
+  });
+  connection.on('close', () => {
+    if (run !== generation || conn !== connection) return;
+    conn = null;
+    pendingMove = false;
+    updateConnectionStatus('waiting', 'Connessione persa. Riconnessione automatica…');
+    showModal('waiting-modal');
+    scheduleReconnect(run);
+  });
+  connection.on('error', error => {
+    if (run !== generation || conn !== connection) return;
+    console.warn('Connessione:', error);
+    connection.close();
+  });
+}
+
+function sendSnapshot() {
+  if (conn?.open) conn.send({ type: 'state', moves });
 }
 
 function handleRemoteMessage(message) {
-  if (message.type === 'move') {
-    const { big, small, player } = message.payload;
-    
-    // Applica la mossa ricevuta
-    applyRemoteMove(big, small, player);
-  } else if (message.type === 'init') {
-    // Il joiner riceve lo stato iniziale dall'host
-    generateTable();
+  if (!message || typeof message !== 'object') return;
+  if (isHost) {
+    if (message.type === 'hello') {
+      if (typeof message.token !== 'string' || !message.token) return;
+      acceptedGuestToken = message.token;
+      saveSession();
+      sendSnapshot();
+      updateConnectionStatus('connected', 'Connesso');
+      hideModal('waiting-modal');
+    } else if (message.type === 'leave' && message.token === acceptedGuestToken) {
+      acceptedGuestToken = null;
+      saveSession();
+      conn.close();
+    } else if (message.type === 'move' && acceptedGuestToken &&
+               message.token === acceptedGuestToken) {
+      const { big, small, revision } = message;
+      if (revision === moves.length && GIOCATORE === 'X' &&
+          Number.isInteger(big) && Number.isInteger(small)) {
+        const cell = document.getElementById(String(big * 10 + small));
+        if (cell && handleClick(cell, true)) {
+          moves.push({ big, small, player: 'X' });
+          saveSession();
+        }
+      }
+      sendSnapshot();
+    }
+  } else if (message.type === 'state' && Array.isArray(message.moves)) {
+    if (renderMoves(message.moves)) {
+      moves = message.moves;
+      pendingMove = false;
+      saveSession();
+      updateConnectionStatus('connected', 'Connesso');
+      hideModal('waiting-modal');
+    } else {
+      renderMoves(moves);
+    }
   }
 }
 
-function applyRemoteMove(big, small, player) {
-  // Trova la cella corrispondente
-  const cellId = big * 10 + small;
-  const cella = document.getElementById(cellId);
-  
-  if (!cella) {
-    console.error('Cella non trovata:', cellId);
+function renderMoves(history) {
+  if (!Array.isArray(history) || history.length > 81) return false;
+  generateTable();
+  for (const move of history) {
+    if (!move || !Number.isInteger(move.big) || !Number.isInteger(move.small) ||
+        (move.player !== 'O' && move.player !== 'X') || move.player !== GIOCATORE) {
+      return false;
+    }
+    const cell = document.getElementById(String(move.big * 10 + move.small));
+    if (!cell || !handleClick(cell, true)) return false;
+  }
+  return true;
+}
+
+function onHostMoveApplied(big, small, player) {
+  moves.push({ big, small, player });
+  saveSession();
+  sendSnapshot();
+}
+
+function requestOnlineMove(big, small) {
+  if (pendingMove || !conn?.open) return false;
+  pendingMove = true;
+  const run = generation;
+  conn.send({ type: 'move', big, small, revision: moves.length, token: guestToken });
+  // Se la risposta si perde, richiedi nuovamente lo stato con una riconnessione.
+  setTimeout(() => {
+    if (run === generation && pendingMove && isOnlineMode && !isHost) {
+      pendingMove = false;
+      if (conn?.open) conn.send({ type: 'hello', token: guestToken });
+    }
+  }, 5000);
+  return true;
+}
+
+function createOnlineGame() {
+  startSession(generateGameId(), true);
+}
+
+function joinOnlineGame(gameId) {
+  const normalized = gameId.trim().toUpperCase();
+  if (!validGameId(normalized)) {
+    showError('Inserisci un codice nel formato ABCD-2345.');
     return;
   }
-  
-  console.log('Applico mossa remota:', { big, small, player, currentGIOCATORE: GIOCATORE });
-  
-  // Verifica che sia il turno corretto
-  if (GIOCATORE !== player) {
-    console.error('Turno non corretto! Atteso:', GIOCATORE, 'Ricevuto:', player);
-    return;
-  }
-  
-  // Simula il click - handleClick cambierà automaticamente GIOCATORE
-  handleClick(cella, true);
+  const saved = readSession();
+  startSession(normalized, false, saved?.gameId === normalized && !saved.isHost ? saved : null);
 }
 
-// ============================================
-// UI MODALS
-// ============================================
-
-function showModal(modalId) {
-  document.getElementById(modalId).classList.remove('hidden');
-}
-
-function hideModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
-}
-
-function showModeSelection() {
-  showModal('mode-selection-modal');
+function resumeGame() {
+  const session = readSession();
+  if (session) startSession(session.gameId, session.isHost, session);
 }
 
 function playLocal() {
+  generation++;
+  disposeConnection();
   isOnlineMode = false;
   hideModal('mode-selection-modal');
+  hideModal('waiting-modal');
   document.getElementById('online-ui').classList.add('hidden');
   generateTable();
 }
 
 function showCreateGame() {
-  hideModal('mode-selection-modal');
   createOnlineGame();
 }
 
 function showJoinGame() {
   hideModal('mode-selection-modal');
   showModal('join-modal');
+  document.getElementById('join-code-input').focus();
 }
 
 function submitJoinGame() {
-  const input = document.getElementById('join-code-input');
-  const gameId = input.value.trim().toUpperCase();
-  
-  if (!gameId) {
-    showError('Inserisci un codice partita');
-    return;
-  }
-  
-  hideModal('join-modal');
-  joinOnlineGame(gameId);
+  joinOnlineGame(document.getElementById('join-code-input').value);
 }
 
-function copyGameCode() {
-  const code = document.getElementById('game-code-display').textContent;
-  navigator.clipboard.writeText(code).then(() => {
-    const btn = document.getElementById('copy-code-btn');
-    const originalText = btn.textContent;
-    btn.textContent = '✓ Copiato!';
-    setTimeout(() => {
-      btn.textContent = originalText;
-    }, 2000);
-  });
-}
-
-function exitGame() {
-  if (confirm('Sei sicuro di voler uscire dalla partita?')) {
-    if (conn) {
-      conn.close();
-    }
-    if (peer) {
-      peer.destroy();
-    }
-    
-    isOnlineMode = false;
-    currentGameId = null;
-    myPlayer = null;
-    isHost = false;
-    
-    document.getElementById('online-ui').classList.add('hidden');
-    showModeSelection();
+async function copyGameCode() {
+  try {
+    await navigator.clipboard.writeText(currentGameId);
+    const button = document.getElementById('copy-code-btn');
+    button.textContent = '✓ Copiato';
+    setTimeout(() => { button.textContent = 'Copia codice'; }, 2000);
+  } catch {
+    showError('Copia il codice mostrato sopra.');
   }
 }
 
-// ============================================
-// INIZIALIZZAZIONE
-// ============================================
+function exitGame(skipConfirm = false) {
+  if (!skipConfirm && !confirm('Vuoi uscire dalla partita?')) return;
+  if (!isHost && conn?.open) conn.send({ type: 'leave', token: guestToken });
+  generation++;
+  disposeConnection();
+  isOnlineMode = false;
+  currentGameId = null;
+  myPlayer = null;
+  isHost = false;
+  moves = [];
+  localStorage.removeItem(STORAGE_KEY);
+  hideModal('waiting-modal');
+  hideModal('vittoria');
+  document.getElementById('online-ui').classList.add('hidden');
+  document.getElementById('game-container').innerHTML = '';
+  const url = new URL(window.location.href);
+  url.searchParams.delete('game');
+  history.replaceState(null, '', url.href);
+  showModeSelection();
+}
 
-// Controlla se c'è un gameId nell'URL
 window.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const gameId = params.get('game');
-  
-  if (gameId) {
-    // Auto-join se c'è un codice nell'URL
-    document.getElementById('join-code-input').value = gameId;
-    showJoinGame();
-  } else {
-    // Mostra selezione modalità
-    showModeSelection();
-  }
-  
-  // Mostra UI online se necessario
-  if (isOnlineMode) {
-    document.getElementById('online-ui').classList.remove('hidden');
-    if (currentGameId) {
-      document.getElementById('current-game-code').textContent = currentGameId;
+  const fromLink = new URLSearchParams(location.search).get('game')?.toUpperCase();
+  const saved = readSession();
+  if (fromLink && validGameId(fromLink)) {
+    if (saved?.gameId === fromLink) {
+      resumeGame();
+    } else {
+      document.getElementById('join-code-input').value = fromLink;
+      showJoinGame();
     }
+  } else if (saved) {
+    resumeGame();
+  } else {
+    showModeSelection();
   }
 });

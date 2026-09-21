@@ -320,24 +320,42 @@ footer a:hover {
 .mode-buttons {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   margin-bottom: 20px;
 }
+
+.home-content {
+  width: min(100%, 540px);
+  padding: 36px;
+}
+
+.home-kicker {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.home-content h2 { margin-bottom: 10px; }
 
 .mode-btn {
   background-color: var(--bg-selected);
   border: 2px solid var(--border-color);
   color: var(--white);
-  padding: 20px;
+  padding: 16px 20px;
   border-radius: 12px;
   cursor: pointer;
   font-size: 16px;
   transition: all 0.3s ease;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: center;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
 }
+
+.mode-btn.hidden { display: none; }
 
 .mode-btn:hover {
   background-color: var(--border-color);
@@ -347,7 +365,16 @@ footer a:hover {
 }
 
 .mode-icon {
-  font-size: 2.5em;
+  font-size: 2em;
+  width: 2rem;
+  flex: 0 0 2rem;
+  text-align: center;
+}
+
+.mode-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .mode-title {
@@ -359,6 +386,19 @@ footer a:hover {
 .mode-desc {
   font-size: 0.9em;
   opacity: 0.8;
+}
+
+.resume-btn {
+  border-color: var(--success);
+  background-color: #194338;
+}
+
+.resume-btn .mode-title { color: #8ce4b3; }
+
+.mode-btn:focus-visible, .text-btn:focus-visible, .secondary-btn:focus-visible,
+.close-btn:focus-visible, .copy-btn:focus-visible, .exit-btn:focus-visible {
+  outline: 3px solid var(--text-secondary);
+  outline-offset: 3px;
 }
 
 .text-btn {
@@ -583,6 +623,13 @@ footer a:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: pulse 2s ease-in-out infinite;
+}
+
+.victory-title.defeat {
+  background: none;
+  -webkit-text-fill-color: var(--white);
+  color: var(--white);
+  animation: none;
 }
 
 .victory-subtitle {

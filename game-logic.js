@@ -1,5 +1,7 @@
 let GIOCATORE = "O";
 let MATRICE = [];
+let partitaFinita = false;
+let risultatoTimer = null;
 const board = document.getElementById("game-container");
 const displayGiocatoreEl = document.getElementById("giocatore_attuale");
 const combinazioniVincenti = [
@@ -24,21 +26,24 @@ function chiudiVittoria() {
 function mostraVittoria(vincitore) {
   const modal = document.getElementById("vittoria");
   const simbolo = document.getElementById("winner-symbol");
-  const nome = document.getElementById("winner-name");
+  const titolo = document.getElementById('result-title');
+  const sconfitta = typeof isOnlineMode !== 'undefined' && isOnlineMode && myPlayer !== vincitore;
 
   simbolo.textContent = vincitore;
   simbolo.className = `winner-symbol ${vincitore.toLowerCase()}`;
-  nome.textContent = vincitore;
+  titolo.textContent = sconfitta ? 'Sconfitta' : '🎉 VITTORIA! 🎉';
+  titolo.classList.toggle('defeat', sconfitta);
+  document.getElementById('result-message').textContent =
+    sconfitta ? `Ha vinto il giocatore ${vincitore}.` :
+      `Il giocatore ${vincitore} ha conquistato il Super Tris!`;
 
   modal.classList.remove("hidden");
 }
 
 function nuovaPartita() {
   chiudiVittoria();
-  
-  // In modalità online, esci e torna alla selezione
   if (typeof isOnlineMode !== 'undefined' && isOnlineMode) {
-    exitGame();
+    exitGame(true);
   } else {
     generateTable();
   }
@@ -52,7 +57,7 @@ function mostraRegole() {
 function checkWin(tris) {
   for (let combo of combinazioniVincenti) {
     let [a, b, c] = combo;
-    if (tris[a] !== "" && tris[a] === tris[b] && tris[a] === tris[c]) {
+    if ((tris[a] === 'O' || tris[a] === 'X') && tris[a] === tris[b] && tris[a] === tris[c]) {
       return tris[a]; // "O" oppure "X"
     }
   }
@@ -75,22 +80,26 @@ function handleClick(cella, isRemote = false) {
   let [big, small] = returnTris(cella.id);
   let matriceEl = document.querySelectorAll("bigTris");
 
-  // In modalità online e NON è una mossa remota, verifica che sia il turno del giocatore
-  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
-    if (typeof myPlayer !== 'undefined' && GIOCATORE !== myPlayer) {
-      console.log('Non è il tuo turno! GIOCATORE:', GIOCATORE, 'myPlayer:', myPlayer);
-      return; // Non è il tuo turno
-    }
+  if (partitaFinita || !Number.isInteger(big) || !Number.isInteger(small) ||
+      big < 0 || big > 8 || small < 0 || small > 8 || !Array.isArray(MATRICE[big])) {
+    return false;
   }
 
   // controlla se cliccato, se ha la classe toPlay o se è già completato
   if (
     MATRICE[big][small] !== "" ||
-    !matriceEl[big].classList.contains("toPlay") ||
-    !Array.isArray(MATRICE[big])
+    !matriceEl[big].classList.contains("toPlay")
   ) {
-    return;
+    return false;
   }
+
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
+    if (GIOCATORE !== myPlayer || !conn || !conn.open) return false;
+    // L'host applica la mossa; l'ospite attende la conferma dell'host.
+    if (!isHost) return requestOnlineMove(big, small);
+  }
+
+  const giocatoreMossa = GIOCATORE;
 
   // rimuovi classe toPlay da tutte le celle
   matriceEl.forEach((el) => {
@@ -103,13 +112,6 @@ function handleClick(cella, isRemote = false) {
   segno.classList.add(GIOCATORE.toLowerCase());
   cella.appendChild(segno);
   MATRICE[big][small] = GIOCATORE;
-
-  // Se modalità online e NON è una mossa remota, invia la mossa
-  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && !isRemote) {
-    if (typeof sendRemoteMove === 'function') {
-      sendRemoteMove(big, small);
-    }
-  }
 
   let trisGrande = matriceEl[big];
   let vincitore = checkWin(MATRICE[big]);
@@ -126,10 +128,14 @@ function handleClick(cella, isRemote = false) {
     // controllo vittoria della matrice
     let vincitoreFinale = checkWin(MATRICE);
     if (vincitoreFinale) {
-      setTimeout(() => {
+      partitaFinita = true;
+      if (typeof isOnlineMode !== 'undefined' && isOnlineMode && isHost && !isRemote) {
+        onHostMoveApplied(big, small, giocatoreMossa);
+      }
+      risultatoTimer = setTimeout(() => {
         mostraVittoria(vincitoreFinale);
       }, 500);
-      return;
+      return true;
     }
   } else if (isTrisComplete(MATRICE[big])) {
     // Il tris è pieno ma nessuno ha vinto - segna come "DRAW"
@@ -162,16 +168,42 @@ function handleClick(cella, isRemote = false) {
     matriceEl[small].classList.add("toPlay");
   }
 
+  if (!document.querySelector('bigTris.toPlay')) {
+    partitaFinita = true;
+    risultatoTimer = setTimeout(mostraPareggio, 500);
+  }
+
   // switch player
   GIOCATORE = GIOCATORE == "O" ? "X" : "O";
   displayGiocatoreEl.textContent = GIOCATORE;
+  if (typeof isOnlineMode !== 'undefined' && isOnlineMode && isHost && !isRemote) {
+    onHostMoveApplied(big, small, giocatoreMossa);
+  }
+  return true;
+}
+
+function mostraPareggio() {
+  document.getElementById('winner-symbol').textContent = '=';
+  document.getElementById('winner-symbol').className = 'winner-symbol';
+  document.getElementById('result-message').textContent =
+    'Nessun giocatore ha conquistato il Super Tris.';
+  document.getElementById('vittoria').classList.remove('hidden');
+  const titolo = document.getElementById('result-title');
+  titolo.textContent = 'Pareggio';
+  titolo.classList.remove('defeat');
 }
 
 function reset() {
+  clearTimeout(risultatoTimer);
+  risultatoTimer = null;
+  document.getElementById('vittoria').classList.add('hidden');
   board.innerHTML = "";
   MATRICE = [];
+  partitaFinita = false;
   GIOCATORE = "O";
   displayGiocatoreEl.textContent = GIOCATORE;
+  document.getElementById('result-title').textContent = '🎉 VITTORIA! 🎉';
+  document.getElementById('result-title').classList.remove('defeat');
 }
 
 function generateTable() {
