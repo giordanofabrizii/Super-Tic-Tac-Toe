@@ -35,24 +35,30 @@
 
     <!-- Modal Selezione Modalità -->
     <div id="mode-selection-modal" class="modal-overlay hidden">
-      <div class="modal-content">
+      <div class="modal-content home-content">
+        <span class="home-kicker">TRIS, MA SU NOVE CAMPI</span>
         <h2>Super Tris</h2>
-        <p class="modal-subtitle">Scegli come giocare</p>
+        <p class="modal-subtitle">Scegli una modalità e conquista tre mini-griglie in fila.</p>
         <div class="mode-buttons">
+          <button id="resume-game-btn" class="mode-btn resume-btn hidden" onclick="resumeGame()">
+            <span class="mode-icon">↩</span>
+            <span class="mode-copy"><span class="mode-title">Riprendi partita</span>
+            <span class="mode-desc">Rientra nella stanza <strong id="resume-code"></strong></span></span>
+          </button>
           <button class="mode-btn local-btn" onclick="playLocal()">
             <span class="mode-icon">🎮</span>
-            <span class="mode-title">Gioca in Locale</span>
-            <span class="mode-desc">Due giocatori sullo stesso dispositivo</span>
+            <span class="mode-copy"><span class="mode-title">Gioca in locale</span>
+            <span class="mode-desc">Due giocatori, un dispositivo</span></span>
           </button>
           <button class="mode-btn create-btn" onclick="showCreateGame()">
             <span class="mode-icon">🌐</span>
-            <span class="mode-title">Crea Partita Online</span>
-            <span class="mode-desc">Genera un codice per il tuo amico</span>
+            <span class="mode-copy"><span class="mode-title">Crea partita online</span>
+            <span class="mode-desc">Invita un amico con un codice</span></span>
           </button>
           <button class="mode-btn join-btn" onclick="showJoinGame()">
             <span class="mode-icon">🔗</span>
-            <span class="mode-title">Unisciti a Partita</span>
-            <span class="mode-desc">Inserisci il codice partita</span>
+            <span class="mode-copy"><span class="mode-title">Unisciti a una partita</span>
+            <span class="mode-desc">Hai già un codice? Entra qui</span></span>
           </button>
         </div>
         <button class="text-btn" onclick="mostraRegole()">
@@ -103,7 +109,7 @@
             <div class="spinner"></div>
             <p id="waiting-message">In attesa dell'avversario...</p>
           </div>
-          <p class="waiting-info">
+          <p id="waiting-info" class="waiting-info">
             Condividi questo codice con il tuo amico oppure invia questo link:
             <br />
             <a id="share-link" class="share-link" href="#"></a>
@@ -158,15 +164,12 @@
       </div>
     </div>
 
-    <!-- Modal Vittoria -->
+    <!-- Risultato partita -->
     <div id="vittoria" class="modal-overlay hidden">
       <div class="modal-content victory-content">
-        <div class="victory-title">🎉 VITTORIA! 🎉</div>
+        <div id="result-title" class="victory-title">🎉 VITTORIA! 🎉</div>
         <div class="winner-symbol" id="winner-symbol">O</div>
-        <div class="victory-subtitle">
-          Il giocatore <span id="winner-name">O</span> ha conquistato il Super
-          Tris!
-        </div>
+        <div id="result-message" class="victory-subtitle">Il giocatore O ha conquistato il Super Tris!</div>
         <div>
           <button class="close-btn" onclick="nuovaPartita()">
             🎮 Nuova Partita
